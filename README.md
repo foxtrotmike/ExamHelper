@@ -49,7 +49,7 @@ This repository provides utilities for managing and summarising student marks in
 
 **Fayyaz Minhas**  
 University of Warwick
-
+(Provided as-is, use at own risk -- good idea to keep copies just in case)
 ---
 
 ## 📜 License
