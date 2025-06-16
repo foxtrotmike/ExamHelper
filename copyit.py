@@ -1,42 +1,96 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu Jun 13 16:03:12 2024
+CS429 Assignment 2 Marks Integration Script
+===========================================
 
-@author: fayya
+Purpose:
+--------
+This script integrates final marks from the feedback sheet (`CS429-Assignment-2.xlsx`) into
+the main CS429 gradebook (`CS429-15.xlsx`) by computing the final mark for each student,
+favouring the 'Adjustment Mark' if available, otherwise using the 'Feedback Mark'.
+
+Steps Performed:
+----------------
+1. Load the feedback file and calculate a 'Final Mark' per student.
+2. Load the main CS429 gradebook with a two-row header and flatten it.
+3. Merge final marks into the appropriate student rows using University ID.
+4. Overwrite the 'Assignment 2' column in the gradebook with the computed final marks.
+5. Save the result as `CS429-15_updated.xlsx`.
+
+Next Step (Manual):
+-------------------
+After running this script, open `CS429-15_updated.xlsx` and **copy the updated
+'Assignment 2' column** into the original gradebook file (`CS429-15.xlsx`) to
+finalise the marks.
+
+This manual copy step ensures that no other formatting or formulas in the original
+gradebook are unintentionally altered.
+
+Author:
+-------
+Fayyaz Minhas
 """
 
 import pandas as pd
-bdir = r'C:\Users\fayya\OneDrive - University of Warwick\Desktop\CS429/'
-# Read the first file
-file1 = pd.read_excel(bdir+'CS429-Assignment-2.xlsx')
+import os
 
-# Determine the final marks based on 'Adjustment Mark' or 'Feedback Mark'
-file1['Final Mark'] = file1.apply(
-    lambda row: row['Adjustment Mark'] if pd.notna(row['Adjustment Mark']) else row['Feedback Mark'], axis=1)
+# ----------------------------
+# Step 1: Define base directory
+# ----------------------------
+# Use a relative or absolute path to the folder containing the Excel files
+base_dir = r'C:\Users\fayya\OneDrive - University of Warwick\Desktop\CS429'
 
-# Read the second file, setting the header as the first two rows
-file2 = pd.read_excel(bdir+'CS429-15.xlsx', header=[0, 1])
+# ----------------------------
+# Step 2: Load feedback marks
+# ----------------------------
+file_feedback = os.path.join(base_dir, 'CS429-Assignment-2.xlsx')
+df_feedback = pd.read_excel(file_feedback)
 
-# Flatten the MultiIndex columns to single level
-file2.columns = [' '.join(col).strip() for col in file2.columns.values]
+# Compute the final mark: use 'Adjustment Mark' if present, else 'Feedback Mark'
+df_feedback['Final Mark'] = df_feedback.apply(
+    lambda row: row['Adjustment Mark'] if pd.notna(row['Adjustment Mark']) else row['Feedback Mark'],
+    axis=1
+)
 
-# Locate the ID column in file2 and the target column
+# ----------------------------
+# Step 3: Load main gradebook
+# ----------------------------
+file_gradebook = os.path.join(base_dir, 'CS429-15.xlsx')
+df_gradebook = pd.read_excel(file_gradebook, header=[0, 1])  # Two-row header
+
+# Flatten MultiIndex columns into single-line strings
+df_gradebook.columns = [' '.join(col).strip() for col in df_gradebook.columns.values]
+
+# ----------------------------
+# Step 4: Extract relevant columns
+# ----------------------------
 id_column = 'University ID'
-target_column_prefix = 'Assignment 2'
+assignment_col = 'Assignment 2'
 
-# Extract the relevant columns for easier handling
-file2_ids = file2[[col for col in file2.columns if id_column in col]]
-file2_target = file2[[col for col in file2.columns if target_column_prefix in col]]
+# Identify columns by partial match to avoid exact column name dependence
+df_ids = df_gradebook[[col for col in df_gradebook.columns if id_column in col]]
+df_scores = df_gradebook[[col for col in df_gradebook.columns if assignment_col in col]]
 
-# Flatten the MultiIndex columns for easier comparison
-file2_ids.columns = [id_column]
-file2_target.columns = [target_column_prefix]
+# Standardise column names for merging
+df_ids.columns = [id_column]
+df_scores.columns = [assignment_col]
 
-# Merge the final marks from file1 into file2 based on IDs
-merged_df = file2_ids.merge(file1[['Student University Id', 'Final Mark']], left_on=id_column, right_on='Student University Id', how='left')
+# ----------------------------
+# Step 5: Merge and update marks
+# ----------------------------
+# Match final marks from feedback sheet to gradebook using University ID
+df_merged = df_ids.merge(
+    df_feedback[['Student University Id', 'Final Mark']],
+    left_on=id_column,
+    right_on='Student University Id',
+    how='left'
+)
 
-# Add the 'Final Mark' to the target column in file2
-file2[target_column_prefix] = merged_df['Final Mark']
+# Overwrite assignment scores with final marks
+df_gradebook[assignment_col] = df_merged['Final Mark']
 
-# Save the updated file2
-file2.to_excel(bdir+'CS429-15_updated.xlsx', index=False)
+# ----------------------------
+# Step 6: Save updated gradebook
+# ----------------------------
+output_file = os.path.join(base_dir, 'CS429-15_updated.xlsx')
+df_gradebook.to_excel(output_file, index=False)
