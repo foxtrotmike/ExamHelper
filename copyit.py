@@ -38,7 +38,7 @@ import os
 # Step 1: Define base directory
 # ----------------------------
 # Use a relative or absolute path to the folder containing the Excel files
-base_dir = r'C:\Users\fayya\OneDrive - University of Warwick\Desktop\CS429'
+base_dir = r'./'
 
 # ----------------------------
 # Step 2: Load feedback marks
